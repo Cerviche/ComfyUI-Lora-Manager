@@ -633,6 +633,13 @@ class BaseModelService(ABC):
         except Exception:
             hide_early_access = False
 
+        # Check user setting for hiding permanent paid updates
+        hide_paid = False
+        try:
+            hide_paid = bool(self.settings.get("hide_paid_updates", False))
+        except Exception:
+            hide_paid = False
+
         records = None
         resolved: Optional[Dict[int, bool]] = None
         if same_base_mode:
@@ -641,7 +648,10 @@ class BaseModelService(ABC):
                 try:
                     records = await cast(Awaitable[Any], record_method(self.model_type, ordered_ids))
                     resolved = {
-                        model_id: record.has_update(hide_early_access=hide_early_access)
+                        model_id: record.has_update(
+                            hide_early_access=hide_early_access,
+                            hide_paid=hide_paid,
+                        )
                         for model_id, record in records.items()
                     }
                 except Exception as exc:
@@ -663,6 +673,7 @@ class BaseModelService(ABC):
                         self.model_type,
                         ordered_ids,
                         hide_early_access=hide_early_access,
+                        hide_paid=hide_paid,
                     ))
                 except Exception as exc:
                     logger.error(
@@ -677,7 +688,10 @@ class BaseModelService(ABC):
         if resolved is None:
             tasks = [
                 self.update_service.has_update(
-                    self.model_type, model_id, hide_early_access=hide_early_access
+                    self.model_type,
+                    model_id,
+                    hide_early_access=hide_early_access,
+                    hide_paid=hide_paid,
                 )
                 for model_id in ordered_ids
             ]
@@ -717,6 +731,7 @@ class BaseModelService(ABC):
                         threshold_version,
                         base_model,
                         hide_early_access=hide_early_access,
+                        hide_paid=hide_paid,
                     )
                 else:
                     flag = default_flag
@@ -957,14 +972,25 @@ class BaseModelService(ABC):
         )
         return {k: data[k] for k in fields if k in data}
 
-    async def get_folder_tree(self, model_root: str) -> Dict[str, Any]:
+    async def _get_tree_folders(self, cache, include_empty: bool) -> List[str]:
+        """Return the folder list backing folder tree responses.
+
+        With ``include_empty`` the directories are enumerated live from the
+        filesystem (including empty ones) via the scanner; otherwise the
+        models-only ``cache.folders`` list is used unchanged.
+        """
+        if include_empty:
+            return await self.scanner.get_all_folders()
+        return cache.folders
+
+    async def get_folder_tree(self, model_root: str, include_empty: bool = False) -> Dict[str, Any]:
         """Get hierarchical folder tree for a specific model root"""
         cache = await self.scanner.get_cached_data()
 
         # Build tree structure from folders
         tree = {}
 
-        for folder in cache.folders:
+        for folder in await self._get_tree_folders(cache, include_empty):
             # Check if this folder belongs to the specified model root
             folder_belongs_to_root = False
             for root in self.scanner.get_model_roots():
@@ -986,7 +1012,7 @@ class BaseModelService(ABC):
 
         return tree
 
-    async def get_unified_folder_tree(self) -> Dict[str, Any]:
+    async def get_unified_folder_tree(self, include_empty: bool = False) -> Dict[str, Any]:
         """Get unified folder tree across all model roots"""
         cache = await self.scanner.get_cached_data()
 
@@ -996,7 +1022,7 @@ class BaseModelService(ABC):
         # Get all model roots for path normalization
         model_roots = self.scanner.get_model_roots()
 
-        for folder in cache.folders:
+        for folder in await self._get_tree_folders(cache, include_empty):
             if not folder:  # Skip empty folders
                 continue
 

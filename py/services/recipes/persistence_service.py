@@ -117,6 +117,7 @@ class RecipePersistenceService:
             "loras": loras_data,
             "gen_params": gen_params,
             "fingerprint": fingerprint,
+            "has_workflow": self._detect_has_workflow(normalized_image_path),
         }
         if checkpoint_entry:
             recipe_data["checkpoint"] = checkpoint_entry
@@ -426,8 +427,21 @@ class RecipePersistenceService:
         if not recipe_path or not os.path.exists(recipe_path):
             raise RecipeNotFoundError("Recipe not found")
 
-        target_lora = await recipe_scanner.get_local_lora(target_name)
+        with open(recipe_path, "r", encoding="utf-8") as file_obj:
+            recipe_base_model = json.load(file_obj).get("base_model", "")
+
+        target_lora = await recipe_scanner.get_local_lora(target_name, recipe_base_model)
         if not target_lora:
+            matches = await recipe_scanner.find_local_loras_by_name(target_name)
+            if len(matches) > 1:
+                raise RecipeValidationError(
+                    f"Multiple local LoRAs match '{target_name}'; "
+                    "include the folder path to disambiguate"
+                )
+            if len(matches) == 1:
+                raise RecipeValidationError(
+                    f"Local LoRA '{target_name}' has a different base model than the recipe"
+                )
             raise RecipeNotFoundError(f"Local LoRA not found with name: {target_name}")
 
         recipe_data, updated_lora = await recipe_scanner.update_lora_entry(
@@ -602,6 +616,9 @@ class RecipePersistenceService:
                 if key not in ["checkpoint", "loras"]
             },
             "loras_stack": lora_stack,
+            # Widget saves re-encode an in-memory tensor to PNG/WebP with no
+            # embedded metadata chunks, so a workflow can never be present.
+            "has_workflow": False,
         }
         if checkpoint_entry:
             recipe_data["checkpoint"] = checkpoint_entry
@@ -625,6 +642,20 @@ class RecipePersistenceService:
         )
 
     # Helper methods ---------------------------------------------------
+
+    def _detect_has_workflow(self, image_path: str) -> bool:
+        """Detect whether the saved recipe image embeds a ComfyUI workflow.
+
+        Extraction failures (missing file, corrupt image, unsupported format)
+        map to ``False`` and never propagate, mirroring the scanner's behavior.
+        """
+        if not image_path or not os.path.exists(image_path):
+            return False
+        try:
+            metadata = self._exif_utils._load_structured_metadata(image_path)
+            return bool(metadata.get("workflow"))
+        except Exception:
+            return False
 
     async def _build_widget_checkpoint_entry(
         self,

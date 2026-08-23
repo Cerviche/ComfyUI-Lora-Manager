@@ -50,9 +50,9 @@ def _collect_stack_entries(lora_stack):
     return entries
 
 
-def _collect_widget_entries(kwargs):
+def _collect_widget_entries(loras):
     entries = []
-    for lora in get_loras_list(kwargs):
+    for lora in get_loras_list({"loras": loras}):
         if not lora.get("active", False):
             continue
         lora_name = apply_lora_syntax_format(lora["name"])
@@ -194,6 +194,7 @@ class LoraLoaderLM:
                     "placeholder": "Search LoRAs to add...",
                     "tooltip": "Format: <lora:lora_name:strength> separated by spaces or punctuation",
                 }),
+                "loras": ("LORAS", {}),
             },
             "optional": FlexibleOptionalInputType(any_type),
         }
@@ -215,12 +216,12 @@ class LoraLoaderLM:
     )
     FUNCTION = "load_loras"
 
-    def load_loras(self, model, text, **kwargs):
-        """Loads multiple LoRAs based on the kwargs input and lora_stack."""
+    def load_loras(self, model, text, loras, **kwargs):
+        """Loads multiple LoRAs based on the widget input and lora_stack."""
         del text
         clip = kwargs.get("clip", None)
         lora_entries = _collect_stack_entries(kwargs.get("lora_stack", None))
-        lora_entries.extend(_collect_widget_entries(kwargs))
+        lora_entries.extend(_collect_widget_entries(loras))
 
         nunchaku_model_kind = detect_nunchaku_model_kind(model)
         if nunchaku_model_kind == "flux":

@@ -1206,9 +1206,13 @@ export class BaseModelApiClient {
         }
     }
 
-    async fetchUnifiedFolderTree() {
+    async fetchUnifiedFolderTree(options = {}) {
         try {
-            const response = await fetch(this.apiConfig.endpoints.unifiedFolderTree);
+            const { includeEmpty = false } = options;
+            const url = includeEmpty
+                ? `${this.apiConfig.endpoints.unifiedFolderTree}?include_empty=1`
+                : this.apiConfig.endpoints.unifiedFolderTree;
+            const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Failed to fetch unified folder tree`);
             }
@@ -1233,7 +1237,7 @@ export class BaseModelApiClient {
         }
     }
 
-    async downloadModel(modelId, versionId, modelRoot, relativePath, useDefaultPaths = false, downloadId, source = null, fileParams = null) {
+    async downloadModel(modelId, versionId, modelRoot, relativePath, useDefaultPaths = false, downloadId, source = null, fileParams = null, useSaveDirAsRoot = false) {
         try {
             const response = await fetch(DOWNLOAD_ENDPOINTS.download, {
                 method: 'POST',
@@ -1244,6 +1248,7 @@ export class BaseModelApiClient {
                     model_root: modelRoot,
                     relative_path: relativePath,
                     use_default_paths: useDefaultPaths,
+                    use_save_dir_as_root: useSaveDirAsRoot,
                     download_id: downloadId,
                     ...(source ? { source } : {}),
                     ...(fileParams ? { file_params: fileParams } : {})
@@ -1335,6 +1340,9 @@ export class BaseModelApiClient {
                 }
                 if (pageState.searchOptions.creator !== undefined) {
                     params.append('search_creator', pageState.searchOptions.creator.toString());
+                }
+                if (pageState.searchOptions.hash !== undefined) {
+                    params.append('search_hash', pageState.searchOptions.hash.toString());
                 }
             }
         }

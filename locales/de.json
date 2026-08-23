@@ -222,6 +222,7 @@
                 "modelname": "Modellname",
                 "tags": "Tags",
                 "creator": "Ersteller",
+                "hash": "Hash",
                 "title": "Rezept-Titel",
                 "loraName": "LoRA-Dateiname",
                 "loraModel": "LoRA-Modellname",
@@ -622,6 +623,10 @@
             "label": "Früher Zugriff Updates ausblenden",
             "help": "Nur Early-Access-Updates"
         },
+        "hidePaidUpdates": {
+            "label": "Bezahlte Updates ausblenden",
+            "help": "Wenn aktiviert, zeigen Modelle mit nur bezahlten Updates kein 'Update verfügbar'-Badge an"
+        },
         "licenseIcons": {
             "useNewStyle": "Aktualisierte Lizenzsymbole verwenden",
             "useNewStyleHelp": "Lizenzberechtigungen mit farbigen Indikatoren (neuer Stil) oder nur Einschränkungssymbolen (klassischer Stil) anzeigen. Orientiert sich am aktuellen CivitAI-Design."
@@ -849,20 +854,25 @@
     "recipes": {
         "title": "LoRA-Rezepte",
         "actions": {
-            "sendCheckpoint": "Send to ComfyUI"
+            "sendCheckpoint": "Send to ComfyUI",
+            "sendRecipe": "Send to ComfyUI"
+        },
+        "workflow": {
+            "sendWorkflow": "[TODO: Translate] Send Workflow to ComfyUI",
+            "sent": "[TODO: Translate] Workflow sent to ComfyUI",
+            "sendFailed": "[TODO: Translate] Failed to send workflow to ComfyUI",
+            "noWorkflow": "[TODO: Translate] No embedded workflow found in this recipe"
         },
         "controls": {
             "import": {
                 "action": "Importieren",
                 "title": "Ein Rezept aus Bild oder URL importieren",
-                "urlLocalPath": "URL / Lokaler Pfad",
-                "uploadImage": "Bild hochladen",
-                "urlSectionDescription": "Geben Sie eine Civitai-Bild-URL oder einen lokalen Dateipfad ein, um es als Rezept zu importieren.",
+                "dropZoneLabel": "Bild hochladen",
+                "dropZoneHint": "Bild hierher ziehen, aus der Zwischenablage einfügen oder klicken zum Durchsuchen",
+                "orDivider": "oder Bild per Drag & Drop / Einfügen hinzufügen",
                 "imageUrlOrPath": "Bild-URL oder Dateipfad:",
                 "urlPlaceholder": "https://civitai.com/images/... oder C:/pfad/zu/bild.png",
                 "fetchImage": "Bild abrufen",
-                "uploadSectionDescription": "Laden Sie ein Bild mit LoRA-Metadaten hoch, um es als Rezept zu importieren.",
-                "selectImage": "Bild auswählen",
                 "recipeName": "Rezeptname",
                 "recipeNamePlaceholder": "Rezeptname eingeben",
                 "tagsOptional": "Tags (optional)",
@@ -907,6 +917,8 @@
                 "errors": {
                     "selectImageFile": "Bitte wählen Sie eine Bilddatei aus",
                     "enterUrlOrPath": "Bitte geben Sie eine URL oder einen Dateipfad ein",
+                    "invalidUrl": "Bitte geben Sie eine gültige URL ein",
+                    "invalidInputFormat": "Bitte geben Sie eine Bild-URL oder einen lokalen Bilddateipfad ein",
                     "selectLoraRoot": "Bitte wählen Sie ein LoRA-Stammverzeichnis aus"
                 }
             },
@@ -920,7 +932,9 @@
                 "dateAsc": "Älteste",
                 "lorasCount": "LoRA-Anzahl",
                 "lorasCountDesc": "Meiste",
-                "lorasCountAsc": "Wenigste"
+                "lorasCountAsc": "Wenigste",
+                "opened": "Zuletzt geöffnet",
+                "openedDesc": "Zuletzt geöffnet"
             },
             "refresh": {
                 "title": "Rezeptliste aktualisieren",
@@ -931,6 +945,11 @@
             "favorites": {
                 "title": "Nur Favoriten anzeigen",
                 "action": "Favoriten"
+            },
+            "layout": {
+                "title": "Rezepte-Layout",
+                "grid": "Raster-Layout",
+                "masonry": "Masonry-Layout (Pinterest-Stil, behält das Seitenverhältnis des Bildes bei)"
             }
         },
         "duplicates": {
@@ -1232,11 +1251,13 @@
             "downloaded": "Heruntergeladen",
             "downloadedTooltip": "Zuvor heruntergeladen, aber derzeit nicht in Ihrer Bibliothek.",
             "alreadyInLibrary": "Bereits in Bibliothek",
+            "partiallyDownloaded": "Teilweise heruntergeladen",
             "autoOrganizedPath": "[Automatisch organisiert durch Pfadvorlage]",
             "fileSelection": {
                 "title": "Dateiformat auswählen",
                 "files": "Dateien",
-                "select": "Datei auswählen"
+                "select": "Datei auswählen",
+                "inLibrary": "In Bibliothek"
             },
             "errors": {
                 "invalidUrl": "Ungültiges Civitai URL-Format",
@@ -1277,13 +1298,13 @@
             }
         },
         "deleteModel": {
-            "freesSpace": "[TODO: Translate] Frees {size}",
+            "freesSpace": "Gibt {size} frei",
             "title": "Modell löschen",
             "message": "Sind Sie sicher, dass Sie dieses Modell und alle zugehörigen Dateien löschen möchten?",
-            "recoverableWarning": "[TODO: Translate] This will permanently delete the file after 30 seconds unless you undo."
+            "recoverableWarning": "Die Datei wird nach 20 Sekunden endgültig gelöscht, sofern Sie nicht rückgängig machen."
         },
         "deleteRecipe": {
-            "recoverableWarning": "Diese Aktion kann 30 Sekunden lang rückgängig gemacht werden."
+            "recoverableWarning": "Diese Aktion kann 20 Sekunden lang rückgängig gemacht werden."
         },
         "excludeModel": {
             "title": "Modell ausschließen",
@@ -1413,7 +1434,8 @@
                 "viewCreatorProfile": "Ersteller-Profil anzeigen",
                 "openFileLocation": "Dateispeicherort öffnen",
                 "sendToWorkflow": "An ComfyUI senden",
-                "sendToWorkflowText": "An ComfyUI senden"
+                "sendToWorkflowText": "An ComfyUI senden",
+                "copyHash": "Hash kopieren"
             },
             "openFileLocation": {
                 "success": "Dateispeicherort erfolgreich geöffnet",
@@ -1430,6 +1452,7 @@
                 "location": "Speicherort",
                 "baseModel": "Basis-Modell",
                 "size": "Größe",
+                "hashes": "Hashes",
                 "unknown": "Unbekannt",
                 "usageTips": "Nutzungstipps",
                 "additionalNotes": "Zusätzliche Notizen",
@@ -1521,6 +1544,30 @@
                 "examples": "Beispiele werden geladen...",
                 "versions": "Versionen werden geladen..."
             },
+            "showcase": {
+                "hiddenBySfw": "{count} durch Nur-SFW-Einstellung ausgeblendet",
+                "showExamples": "Beispiele anzeigen",
+                "showCount": "Beispiele anzeigen ({count})",
+                "hideExamples": "Beispiele ausblenden",
+                "addExamples": "Beispiele hinzufügen",
+                "previousExample": "Vorheriges Beispiel",
+                "nextExample": "Nächstes Beispiel",
+                "noExamples": "Keine Beispielbilder verfügbar",
+                "addMoreExamples": "Weitere Beispiele hinzufügen",
+                "dragDrop": "Bilder oder Videos hierher ziehen & ablegen",
+                "or": "oder",
+                "selectFiles": "Dateien auswählen",
+                "supportedFormats": "Unterstützte Formate: jpg, png, gif, webp, avif, jxl, mp4, webm",
+                "importing": "Dateien werden importiert...",
+                "noSupportedFiles": "Keine unterstützten Dateien ausgewählt. Bitte wählen Sie Bild- oder Videodateien aus.",
+                "allFiltered": "Alle Beispielbilder wurden aufgrund der NSFW-Inhaltseinstellungen herausgefiltert",
+                "sfwOnlyEnabled": "Ihre Einstellungen zeigen derzeit nur jugendfreie Inhalte an",
+                "changeInSettings": "Sie können dies in den Einstellungen ändern",
+                "nsfwMature": "Nicht jugendfreie Inhalte",
+                "nsfwR": "Inhalte ab 18 (R)",
+                "nsfwX": "Inhalte mit X-Einstufung",
+                "nsfwXxx": "Inhalte mit XXX-Einstufung"
+            },
             "versions": {
                 "heading": "Modellversionen",
                 "copy": "Verwalten Sie alle Versionen dieses Modells an einem Ort.",
@@ -1548,6 +1595,8 @@
                     "newerTooltip": "Diese Version ist neuer als Ihre neueste lokale Version",
                     "earlyAccess": "Früher Zugriff",
                     "earlyAccessTooltip": "Für diese Version ist derzeit Civitai Early Access erforderlich",
+                    "paid": "Bezahlt",
+                    "paidTooltip": "Diese Version erfordert eine Zahlung zum Herunterladen",
                     "ignored": "Ignoriert",
                     "ignoredTooltip": "Für diese Version sind Update-Benachrichtigungen deaktiviert",
                     "onSiteOnly": "Nur On-Site",
@@ -1556,7 +1605,9 @@
                 "actions": {
                     "download": "Herunterladen",
                     "downloadTooltip": "Diese Version herunterladen",
+                    "downloadRemainingTooltip": "Verbleibende Dateien dieser Version herunterladen",
                     "downloadEarlyAccessTooltip": "Diese Early-Access-Version von Civitai herunterladen",
+                    "downloadPaidTooltip": "Diese bezahlte Version von Civitai herunterladen",
                     "downloadNotAllowedTooltip": "Diese Version ist nur für die On-Site-Generierung auf Civitai verfügbar",
                     "delete": "Löschen",
                     "deleteTooltip": "Diese lokale Version löschen",
@@ -1726,6 +1777,7 @@
             "recipeReplaced": "Rezept im Workflow ersetzt",
             "recipeFailedToSend": "Fehler beim Senden des Rezepts an den Workflow",
             "noMatchingNodes": "Keine kompatiblen Knoten im aktuellen Workflow verfügbar",
+            "noPromptTargets": "Keine kompatiblen Prompt-Ziele im Workflow.\nKlicken Sie mit der rechten Maustaste auf einen Knoten in ComfyUI → Markieren als → Prompt-Ziel festlegen",
             "noTargetNodeSelected": "Kein Zielknoten ausgewählt",
             "modelUpdated": "Modell im Workflow aktualisiert",
             "modelFailed": "Fehler beim Aktualisieren des Modellknotens",
@@ -1902,6 +1954,7 @@
             "downloadPartialSuccess": "{completed} von {total} LoRAs heruntergeladen",
             "downloadPartialWithAccess": "{completed} von {total} LoRAs heruntergeladen. {accessFailures} fehlgeschlagen aufgrund von Zugriffsbeschränkungen. Überprüfen Sie Ihren API-Schlüssel in den Einstellungen oder den Early Access-Status.",
             "pleaseSelectVersion": "Bitte wählen Sie eine Version aus",
+            "pleaseSelectFile": "Bitte wählen Sie mindestens eine Datei aus",
             "versionExists": "Diese Version existiert bereits in Ihrer Bibliothek",
             "downloadCompleted": "Download erfolgreich abgeschlossen",
             "downloadSkippedByBaseModel": "Download übersprungen, weil das Basismodell {baseModel} ausgeschlossen ist",
@@ -1987,7 +2040,10 @@
             "reimportBulkComplete": "Neuimport abgeschlossen: {completed} importiert, {failed} fehlgeschlagen (von {total})",
             "reimportBulkFailed": "Neuimport einiger Rezepte fehlgeschlagen",
             "noMissingLorasInSelection": "Keine fehlenden LoRAs in ausgewählten Rezepten gefunden",
-            "noLoraRootConfigured": "Kein LoRA-Stammverzeichnis konfiguriert. Bitte legen Sie ein Standard-LoRA-Stammverzeichnis in den Einstellungen fest."
+            "noLoraRootConfigured": "Kein LoRA-Stammverzeichnis konfiguriert. Bitte legen Sie ein Standard-LoRA-Stammverzeichnis in den Einstellungen fest.",
+            "workflowSent": "[TODO: Translate] Workflow sent to ComfyUI",
+            "workflowSendFailed": "[TODO: Translate] Failed to send workflow to ComfyUI: {error}",
+            "workflowNoWorkflow": "[TODO: Translate] No embedded workflow found in this recipe"
         },
         "models": {
             "noModelsSelected": "Keine Modelle ausgewählt",
@@ -2119,12 +2175,12 @@
             "copyFailed": "Kopieren fehlgeschlagen"
         },
         "undo": {
-            "action": "[TODO: Translate] Undo",
-            "deleted": "[TODO: Translate] Deleted {name}",
-            "deletedBulk": "[TODO: Translate] Deleted {count} item(s)",
-            "expired": "[TODO: Translate] Undo window expired. The item was permanently deleted.",
-            "failed": "[TODO: Translate] Undo failed: {error}",
-            "restored": "[TODO: Translate] Item restored"
+            "action": "Rückgängig",
+            "deleted": "Gelöscht: {name}",
+            "deletedBulk": "{count} Element(e) gelöscht",
+            "expired": "Undo-Fenster abgelaufen. Das Element wurde endgültig gelöscht.",
+            "failed": "Rückgängig machen fehlgeschlagen: {error}",
+            "restored": "Element wiederhergestellt"
         },
         "virtual": {
             "loadFailed": "Fehler beim Laden der Elemente",
@@ -2189,6 +2245,7 @@
             "fileRenameFailed": "Fehler beim Umbenennen der Datei: {error}",
             "previewUpdated": "Vorschau erfolgreich aktualisiert",
             "previewUploadFailed": "Fehler beim Hochladen des Vorschaubilds",
+            "previewDropInvalid": "Nicht unterstützter Dateityp: {name}. Ziehen Sie stattdessen ein Bild oder ein MP4-Video hinein.",
             "refreshComplete": "{action} abgeschlossen",
             "refreshFailed": "Fehler beim {action} der {type}s",
             "metadataRefreshed": "Metadaten erfolgreich aktualisiert",

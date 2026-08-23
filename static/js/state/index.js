@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS_BASE = Object.freeze({
     priority_tags: { ...DEFAULT_PRIORITY_TAG_CONFIG },
     version_grouping: 'same_base',
     hide_early_access_updates: false,
+    hide_paid_updates: false,
     auto_organize_exclusions: [],
     metadata_refresh_skip_paths: [],
     skip_previously_downloaded_model_versions: false,
@@ -102,6 +103,7 @@ export const state = {
                 modelname: true,
                 tags: false,
                 creator: false,
+                hash: false,
                 recursive: getStorageItem(`${MODEL_TYPES.LORA}_recursiveSearch`, true),
             },
             filters: {
@@ -167,6 +169,7 @@ export const state = {
                 filename: true,
                 modelname: true,
                 creator: false,
+                hash: false,
                 recursive: getStorageItem(`${MODEL_TYPES.CHECKPOINT}_recursiveSearch`, true),
             },
             filters: {
@@ -206,6 +209,7 @@ export const state = {
                 modelname: true,
                 tags: false,
                 creator: false,
+                hash: false,
                 recursive: getStorageItem(`${MODEL_TYPES.EMBEDDING}_recursiveSearch`, true),
             },
             filters: {

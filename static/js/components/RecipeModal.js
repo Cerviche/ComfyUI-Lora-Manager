@@ -1,9 +1,10 @@
 // Recipe Modal Component
 import { showToast, copyToClipboard, sendLoraToWorkflow, sendModelPathToWorkflow, openCivitaiByMetadata, stripLoraTags, sendPromptToWorkflow, sendGenParamsToWorkflow } from '../utils/uiHelpers.js';
+import { isModelWeightFile } from '../utils/modelFileTypes.js';
 import { translate } from '../utils/i18nHelpers.js';
 import { state } from '../state/index.js';
 import { setSessionItem, removeSessionItem, getStorageItem, setStorageItem } from '../utils/storageHelpers.js';
-import { fetchRecipeDetails, updateRecipeMetadata } from '../api/recipeApi.js';
+import { fetchRecipeDetails, updateRecipeMetadata, sendRecipeWorkflow } from '../api/recipeApi.js';
 import { downloadManager } from '../managers/DownloadManager.js';
 import { MODEL_TYPES } from '../api/apiConfig.js';
 import { openMediaViewer } from './shared/MediaViewer.js';
@@ -299,12 +300,20 @@ class RecipeModal {
 
         this.syncGenerationParams(hydratedRecipe.gen_params);
         this.syncResourcesSection(hydratedRecipe);
-        this.syncSourceUrlAction();
+        this.syncHeaderActions();
 
         // Show the modal
         modalManager.showModal('recipeModal');
 
         if (this.recipeId) {
+            // Fire-and-forget: record this open for the "Recently Opened"
+            // sort. Tracking must never disturb the modal, so failures are
+            // swallowed.
+            fetch(`/api/lm/recipe/${encodeURIComponent(this.recipeId)}/opened`, {
+                method: 'POST',
+                keepalive: true,
+            }).catch(() => {});
+
             const hydrationRequestId = ++this.recipeHydrationRequestId;
             const requestEditVersions = this.captureLocalEditVersions();
             this.hydrateRecipeDetails(
@@ -376,6 +385,10 @@ class RecipeModal {
                 nextRecipe.gen_params = preservedGenParams;
             }
 
+            if (fullRecipe.has_workflow !== undefined) {
+                nextRecipe.has_workflow = fullRecipe.has_workflow;
+            }
+
             if (fullRecipe.checkpoint !== undefined) {
                 nextRecipe.checkpoint = fullRecipe.checkpoint;
             } else {
@@ -432,7 +445,7 @@ class RecipeModal {
         } else {
             this.updateSourceUrlDisplay(this.currentRecipe.source_path || '');
         }
-        this.syncSourceUrlAction();
+        this.syncHeaderActions();
     }
 
     getPreviewMediaUrl(recipe = {}) {
@@ -500,28 +513,64 @@ class RecipeModal {
         }
     }
 
-    syncSourceUrlAction() {
+    syncHeaderActions() {
         const actionsContainer = document.getElementById('recipeHeaderActions');
         if (!actionsContainer) {
             return;
         }
 
-        actionsContainer.innerHTML = '';
+        actionsContainer.querySelectorAll('.recipe-source-url-btn').forEach(btn => btn.remove());
+
+        if (this.currentRecipe?.has_workflow === true) {
+            const workflowBtn = document.createElement('button');
+            workflowBtn.className = 'recipe-source-url-btn';
+            workflowBtn.id = 'sendWorkflowBtn';
+            workflowBtn.title = 'Send Workflow to ComfyUI';
+            workflowBtn.innerHTML = '<i class="fas fa-project-diagram"></i> Send Workflow to ComfyUI';
+            workflowBtn.addEventListener('click', () => {
+                this.sendWorkflowToComfyUI();
+            });
+            actionsContainer.appendChild(workflowBtn);
+        }
 
         const sourcePath = this.currentRecipe?.source_path || '';
         const isValidUrl = sourcePath.startsWith('http://') || sourcePath.startsWith('https://');
-        if (!isValidUrl) {
+        if (isValidUrl) {
+            const btn = document.createElement('button');
+            btn.className = 'recipe-source-url-btn';
+            btn.title = sourcePath;
+            btn.innerHTML = '<i class="fas fa-globe"></i> Open Source URL';
+            btn.addEventListener('click', () => {
+                window.open(sourcePath, '_blank');
+            });
+            actionsContainer.appendChild(btn);
+        }
+    }
+
+    async sendWorkflowToComfyUI() {
+        if (!this.recipeId) {
             return;
         }
 
-        const btn = document.createElement('button');
-        btn.className = 'recipe-source-url-btn';
-        btn.title = sourcePath;
-        btn.innerHTML = '<i class="fas fa-globe"></i> Open Source URL';
-        btn.addEventListener('click', () => {
-            window.open(sourcePath, '_blank');
-        });
-        actionsContainer.appendChild(btn);
+        try {
+            const result = await sendRecipeWorkflow(this.recipeId);
+            if (result?.success) {
+                showToast('toast.recipes.workflowSent', {}, 'success', 'Workflow sent to ComfyUI');
+                return;
+            }
+
+            const error = result?.error || '';
+            if (error === 'Standalone Mode Active') {
+                showToast('toast.general.cannotInteractStandalone', {}, 'warning', 'Cannot interact with ComfyUI in standalone mode');
+            } else if (error === 'no_workflow') {
+                showToast('toast.recipes.workflowNoWorkflow', {}, 'warning', 'No embedded workflow found in this recipe');
+            } else {
+                showToast('toast.recipes.workflowSendFailed', { error }, 'error', `Failed to send workflow to ComfyUI: ${error}`);
+            }
+        } catch (error) {
+            console.error('Failed to send workflow to ComfyUI:', error);
+            showToast('toast.recipes.workflowSendFailed', { error: error.message }, 'error', `Failed to send workflow to ComfyUI: ${error.message}`);
+        }
     }
 
     syncTagsDisplay(tags) {
@@ -710,7 +759,7 @@ class RecipeModal {
                 }
             }
 
-            lorasCountElement.innerHTML = `<i class="fas fa-layer-group"></i> ${totalCount} LoRAs ${statusHTML}`;
+            lorasCountElement.innerHTML = `<i class="fas fa-layer-group"></i> ${totalCount} ${totalCount === 1 ? 'LoRA' : 'LoRAs'} ${statusHTML}`;
 
             setTimeout(() => {
                 const viewRecipeLorasBtn = document.getElementById('viewRecipeLorasBtn');
@@ -1144,7 +1193,7 @@ class RecipeModal {
                         // Update source URL in the UI
                         this.commitField('source_path');
                         this.updateSourceUrlDisplay(newSourceUrl, { forceInputSync: true });
-                        this.syncSourceUrlAction();
+                        this.syncHeaderActions();
 
                         // Update the current recipe object
                         this.currentRecipe.source_path = newSourceUrl;
@@ -1171,11 +1220,10 @@ class RecipeModal {
         });
     }
 
-    // Setup copy buttons for prompts and recipe syntax
+    // Setup copy buttons for prompts and send recipe button
     setupCopyButtons() {
         const copyPromptBtn = document.getElementById('copyPromptBtn');
         const copyNegativePromptBtn = document.getElementById('copyNegativePromptBtn');
-        const copyRecipeSyntaxBtn = document.getElementById('copyRecipeSyntaxBtn');
         const sendRecipeBtn = document.getElementById('sendRecipeBtn');
 
         if (copyPromptBtn) {
@@ -1195,13 +1243,6 @@ class RecipeModal {
                     negativePromptText = RecipeModal.stripLoraTags(negativePromptText);
                 }
                 this.copyToClipboard(negativePromptText, 'Negative prompt copied to clipboard');
-            });
-        }
-
-        if (copyRecipeSyntaxBtn) {
-            copyRecipeSyntaxBtn.addEventListener('click', () => {
-                // Use backend API to get recipe syntax
-                this.fetchAndCopyRecipeSyntax();
             });
         }
 
@@ -1288,35 +1329,6 @@ class RecipeModal {
             setStorageItem('strip_lora_on_copy', checked);
             state.global.settings.strip_lora_on_copy = checked;
         });
-    }
-
-    // Fetch recipe syntax from backend and copy to clipboard
-    async fetchAndCopyRecipeSyntax() {
-        if (!this.recipeId) {
-            showToast('toast.recipes.noRecipeId', {}, 'error');
-            return;
-        }
-
-        try {
-            // Fetch recipe syntax from backend
-            const response = await fetch(`/api/lm/recipe/${this.recipeId}/syntax`);
-
-            if (!response.ok) {
-                throw new Error(`Failed to get recipe syntax: ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success && data.syntax) {
-                // Use the centralized copyToClipboard utility function
-                await copyToClipboard(data.syntax, 'Recipe syntax copied to clipboard');
-            } else {
-                throw new Error(data.error || 'No syntax returned from server');
-            }
-        } catch (error) {
-            console.error('Error fetching recipe syntax:', error);
-            showToast('toast.recipes.copyFailed', { message: error.message }, 'error');
-        }
     }
 
     // Helper method to copy text to clipboard
@@ -1412,7 +1424,7 @@ class RecipeModal {
                 loras: validLoras.map(lora => {
                     const civitaiInfo = lora.civitaiInfo;
                     const modelFile = civitaiInfo.files ?
-                        civitaiInfo.files.find(file => file.type === 'Model') : null;
+                        civitaiInfo.files.find(file => isModelWeightFile(file.type)) : null;
 
                     return {
                         // Basic lora info

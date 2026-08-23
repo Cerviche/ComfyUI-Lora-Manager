@@ -222,6 +222,7 @@
                 "modelname": "モデル名",
                 "tags": "タグ",
                 "creator": "作成者",
+                "hash": "ハッシュ",
                 "title": "レシピタイトル",
                 "loraName": "LoRAファイル名",
                 "loraModel": "LoRAモデル名",
@@ -622,6 +623,10 @@
             "label": "早期アクセス更新を非表示",
             "help": "早期アクセスのみの更新"
         },
+        "hidePaidUpdates": {
+            "label": "有料更新を非表示",
+            "help": "有効にすると、有料の更新のみがあるモデルには「更新あり」バッジが表示されません"
+        },
         "licenseIcons": {
             "useNewStyle": "更新されたライセンスアイコンを使用",
             "useNewStyleHelp": "カラーインジケーター付きでライセンス許可を表示（新スタイル）するか、制限のみのアイコンを表示（クラシックスタイル）します。現在のCivitAIデザインを反映しています。"
@@ -849,20 +854,25 @@
     "recipes": {
         "title": "LoRAレシピ",
         "actions": {
-            "sendCheckpoint": "ComfyUIへ送信"
+            "sendCheckpoint": "ComfyUIへ送信",
+            "sendRecipe": "ComfyUIへ送信"
+        },
+        "workflow": {
+            "sendWorkflow": "[TODO: Translate] Send Workflow to ComfyUI",
+            "sent": "[TODO: Translate] Workflow sent to ComfyUI",
+            "sendFailed": "[TODO: Translate] Failed to send workflow to ComfyUI",
+            "noWorkflow": "[TODO: Translate] No embedded workflow found in this recipe"
         },
         "controls": {
             "import": {
                 "action": "インポート",
                 "title": "画像またはURLからレシピをインポート",
-                "urlLocalPath": "URL / ローカルパス",
-                "uploadImage": "画像をアップロード",
-                "urlSectionDescription": "Civitai画像URLまたはローカルファイルパスを入力してレシピとしてインポートします。",
+                "dropZoneLabel": "画像をアップロード",
+                "dropZoneHint": "画像をここにドラッグ＆ドロップ、クリップボードから貼り付け、またはクリックして参照",
+                "orDivider": "または画像をドラッグ＆ドロップ / 貼り付け",
                 "imageUrlOrPath": "画像URLまたはファイルパス：",
                 "urlPlaceholder": "https://civitai.com/images/... または C:/path/to/image.png",
                 "fetchImage": "画像を取得",
-                "uploadSectionDescription": "LoRAメタデータを含む画像をアップロードしてレシピとしてインポートします。",
-                "selectImage": "画像を選択",
                 "recipeName": "レシピ名",
                 "recipeNamePlaceholder": "レシピ名を入力",
                 "tagsOptional": "タグ（任意）",
@@ -907,6 +917,8 @@
                 "errors": {
                     "selectImageFile": "画像ファイルを選択してください",
                     "enterUrlOrPath": "URLまたはファイルパスを入力してください",
+                    "invalidUrl": "有効なURLを入力してください",
+                    "invalidInputFormat": "画像のURLまたはローカルの画像ファイルパスを入力してください",
                     "selectLoraRoot": "LoRAルートディレクトリを選択してください"
                 }
             },
@@ -920,7 +932,9 @@
                 "dateAsc": "古い順",
                 "lorasCount": "LoRA数",
                 "lorasCountDesc": "多い順",
-                "lorasCountAsc": "少ない順"
+                "lorasCountAsc": "少ない順",
+                "opened": "最近開いた",
+                "openedDesc": "最近開いた"
             },
             "refresh": {
                 "title": "レシピリストを更新",
@@ -931,6 +945,11 @@
             "favorites": {
                 "title": "お気に入りのみ表示",
                 "action": "お気に入り"
+            },
+            "layout": {
+                "title": "レシピのレイアウト",
+                "grid": "グリッドレイアウト",
+                "masonry": "メイソンリーレイアウト（Pinterest スタイル、画像のアスペクト比を保持）"
             }
         },
         "duplicates": {
@@ -1232,11 +1251,13 @@
             "downloaded": "ダウンロード済み",
             "downloadedTooltip": "以前にダウンロード済みですが、現在はライブラリにありません。",
             "alreadyInLibrary": "既にライブラリ内",
+            "partiallyDownloaded": "一部ダウンロード済み",
             "autoOrganizedPath": "[パステンプレートによる自動整理]",
             "fileSelection": {
                 "title": "ファイル形式を選択",
                 "files": "ファイル",
-                "select": "ファイルを選択"
+                "select": "ファイルを選択",
+                "inLibrary": "ライブラリ内"
             },
             "errors": {
                 "invalidUrl": "無効なCivitai URL形式",
@@ -1277,13 +1298,13 @@
             }
         },
         "deleteModel": {
-            "freesSpace": "[TODO: Translate] Frees {size}",
+            "freesSpace": "{size} を解放します",
             "title": "モデルを削除",
             "message": "このモデルと関連するすべてのファイルを削除してもよろしいですか？",
-            "recoverableWarning": "[TODO: Translate] This will permanently delete the file after 30 seconds unless you undo."
+            "recoverableWarning": "元に戻さない場合、このファイルは20秒後に完全に削除されます。"
         },
         "deleteRecipe": {
-            "recoverableWarning": "この操作は30秒以内であれば元に戻せます。"
+            "recoverableWarning": "この操作は20秒以内であれば元に戻せます。"
         },
         "excludeModel": {
             "title": "モデルを除外",
@@ -1413,7 +1434,8 @@
                 "viewCreatorProfile": "作成者プロフィールを表示",
                 "openFileLocation": "ファイルの場所を開く",
                 "sendToWorkflow": "ComfyUI に送信",
-                "sendToWorkflowText": "ComfyUI に送信"
+                "sendToWorkflowText": "ComfyUI に送信",
+                "copyHash": "ハッシュをコピー"
             },
             "openFileLocation": {
                 "success": "ファイルの場所を正常に開きました",
@@ -1430,6 +1452,7 @@
                 "location": "場所",
                 "baseModel": "ベースモデル",
                 "size": "サイズ",
+                "hashes": "ハッシュ",
                 "unknown": "不明",
                 "usageTips": "使用のヒント",
                 "additionalNotes": "追加メモ",
@@ -1521,6 +1544,30 @@
                 "examples": "例を読み込み中...",
                 "versions": "バージョンを読み込み中..."
             },
+            "showcase": {
+                "hiddenBySfw": "SFWのみ設定により{count}件非表示",
+                "showExamples": "例を表示",
+                "showCount": "例を表示（{count}）",
+                "hideExamples": "例を非表示",
+                "addExamples": "例を追加",
+                "previousExample": "前の例",
+                "nextExample": "次の例",
+                "noExamples": "利用可能な例画像がありません",
+                "addMoreExamples": "さらに例を追加",
+                "dragDrop": "画像または動画をここにドラッグ＆ドロップ",
+                "or": "または",
+                "selectFiles": "ファイルを選択",
+                "supportedFormats": "対応形式：jpg, png, gif, webp, avif, jxl, mp4, webm",
+                "importing": "ファイルをインポート中...",
+                "noSupportedFiles": "対応ファイルが選択されていません。画像または動画ファイルを選択してください。",
+                "allFiltered": "NSFWコンテンツ設定により、すべての例画像がフィルタリングされています",
+                "sfwOnlyEnabled": "現在の設定ではSFWコンテンツのみが表示されます",
+                "changeInSettings": "設定から変更できます",
+                "nsfwMature": "成人向けコンテンツ",
+                "nsfwR": "R指定コンテンツ",
+                "nsfwX": "X指定コンテンツ",
+                "nsfwXxx": "XXX指定コンテンツ"
+            },
             "versions": {
                 "heading": "モデルバージョン",
                 "copy": "このモデルのすべてのバージョンを一か所で管理します。",
@@ -1548,6 +1595,8 @@
                     "newerTooltip": "このバージョンはローカルの最新バージョンより新しいです",
                     "earlyAccess": "早期アクセス",
                     "earlyAccessTooltip": "このバージョンは現在 Civitai の早期アクセスが必要です",
+                    "paid": "有料",
+                    "paidTooltip": "このバージョンのダウンロードには支払いが必要です",
                     "ignored": "無視中",
                     "ignoredTooltip": "このバージョンの更新通知は無効です",
                     "onSiteOnly": "サイト内のみ",
@@ -1556,7 +1605,9 @@
                 "actions": {
                     "download": "ダウンロード",
                     "downloadTooltip": "このバージョンをダウンロード",
+                    "downloadRemainingTooltip": "このバージョンの残りのファイルをダウンロード",
                     "downloadEarlyAccessTooltip": "Civitai からこの早期アクセス版をダウンロード",
+                    "downloadPaidTooltip": "Civitai からこの有料バージョンをダウンロード",
                     "downloadNotAllowedTooltip": "このバージョンはCivitaiサイト内でのみ利用可能で、ダウンロードはできません",
                     "delete": "削除",
                     "deleteTooltip": "このローカルバージョンを削除",
@@ -1726,6 +1777,7 @@
             "recipeReplaced": "レシピがワークフローで置換されました",
             "recipeFailedToSend": "レシピをワークフローに送信できませんでした",
             "noMatchingNodes": "現在のワークフローには互換性のあるノードがありません",
+            "noPromptTargets": "ワークフロー内に互換性のあるプロンプトターゲットがありません。\nComfyUIでノードを右クリック → Mark as → Send Prompt Target",
             "noTargetNodeSelected": "ターゲットノードが選択されていません",
             "modelUpdated": "モデルがワークフローで更新されました",
             "modelFailed": "モデルノードの更新に失敗しました",
@@ -1902,6 +1954,7 @@
             "downloadPartialSuccess": "{total} LoRAのうち {completed} がダウンロードされました",
             "downloadPartialWithAccess": "{total} LoRAのうち {completed} がダウンロードされました。{accessFailures} はアクセス制限により失敗しました。設定でAPIキーまたはアーリーアクセス状況を確認してください。",
             "pleaseSelectVersion": "バージョンを選択してください",
+            "pleaseSelectFile": "ファイルを1つ以上選択してください",
             "versionExists": "このバージョンは既にライブラリに存在します",
             "downloadCompleted": "ダウンロードが正常に完了しました",
             "downloadSkippedByBaseModel": "ベースモデル {baseModel} が除外されているため、ダウンロードをスキップしました",
@@ -1987,7 +2040,10 @@
             "reimportBulkComplete": "再インポート完了：{completed} 件成功、{failed} 件失敗（合計 {total} 件）",
             "reimportBulkFailed": "一部のレシピの再インポートに失敗しました",
             "noMissingLorasInSelection": "選択したレシピに不足している LoRA が見つかりませんでした",
-            "noLoraRootConfigured": "LoRA ルートディレクトリが設定されていません。設定でデフォルトの LoRA ルートを設定してください。"
+            "noLoraRootConfigured": "LoRA ルートディレクトリが設定されていません。設定でデフォルトの LoRA ルートを設定してください。",
+            "workflowSent": "[TODO: Translate] Workflow sent to ComfyUI",
+            "workflowSendFailed": "[TODO: Translate] Failed to send workflow to ComfyUI: {error}",
+            "workflowNoWorkflow": "[TODO: Translate] No embedded workflow found in this recipe"
         },
         "models": {
             "noModelsSelected": "モデルが選択されていません",
@@ -2119,12 +2175,12 @@
             "copyFailed": "コピーに失敗しました"
         },
         "undo": {
-            "action": "[TODO: Translate] Undo",
-            "deleted": "[TODO: Translate] Deleted {name}",
-            "deletedBulk": "[TODO: Translate] Deleted {count} item(s)",
-            "expired": "[TODO: Translate] Undo window expired. The item was permanently deleted.",
-            "failed": "[TODO: Translate] Undo failed: {error}",
-            "restored": "[TODO: Translate] Item restored"
+            "action": "元に戻す",
+            "deleted": "{name} を削除しました",
+            "deletedBulk": "{count} 個のアイテムを削除しました",
+            "expired": "元に戻せる時間が経過しました。アイテムは完全に削除されました。",
+            "failed": "元に戻せませんでした: {error}",
+            "restored": "アイテムを復元しました"
         },
         "virtual": {
             "loadFailed": "アイテムの読み込みに失敗しました",
@@ -2189,6 +2245,7 @@
             "fileRenameFailed": "ファイル名の変更に失敗しました：{error}",
             "previewUpdated": "プレビューが正常に更新されました",
             "previewUploadFailed": "プレビュー画像のアップロードに失敗しました",
+            "previewDropInvalid": "サポートされていないファイル形式：{name}。画像またはMP4ビデオをドロップしてください。",
             "refreshComplete": "{action} 完了",
             "refreshFailed": "{type}の{action}に失敗しました",
             "metadataRefreshed": "メタデータが正常に更新されました",

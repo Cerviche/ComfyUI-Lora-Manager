@@ -17,6 +17,7 @@ from py.services.recipes.errors import (
     RecipeValidationError,
 )
 from py.services.recipes.persistence_service import RecipePersistenceService
+from py.services.model_scanner import ModelScanner
 from py.recipes.parsers.civitai_image import CivitaiApiMetadataParser
 from py.utils.exif_utils import ExifUtils
 
@@ -25,6 +26,7 @@ class DummyExifUtils:
     def __init__(self):
         self.appended = None
         self.optimized_calls = 0
+        self.workflow_value = None
 
     def optimize_image(self, image_data, target_width, format, quality, preserve_metadata):
         self.optimized_calls += 1
@@ -35,6 +37,14 @@ class DummyExifUtils:
 
     def extract_image_metadata(self, path):
         return {}
+
+    def _load_structured_metadata(self, image_path):
+        return {
+            "parameters": None,
+            "prompt": None,
+            "workflow": self.workflow_value,
+            "comment": None,
+        }
 
 
 @pytest.mark.asyncio
@@ -210,6 +220,84 @@ async def test_save_recipe_reports_duplicates(tmp_path):
     expected_image_path = os.path.normpath(result.payload["image_path"])
     assert stored["file_path"] == expected_image_path
     assert service._exif_utils.appended[0] == expected_image_path
+
+
+@pytest.mark.asyncio
+async def test_save_recipe_records_has_workflow(tmp_path):
+    exif_utils = DummyExifUtils()
+    exif_utils.workflow_value = '{"nodes": []}'
+
+    class DummyCache:
+        def __init__(self):
+            self.raw_data = []
+
+        async def resort(self):
+            pass
+
+    class DummyScanner:
+        def __init__(self, root):
+            self.recipes_dir = str(root)
+            self._cache = DummyCache()
+
+        async def find_recipes_by_fingerprint(self, fingerprint):
+            return []
+
+        async def add_recipe(self, recipe_data):
+            self._cache.raw_data.append(recipe_data)
+
+    scanner = DummyScanner(tmp_path)
+    service = RecipePersistenceService(
+        exif_utils=exif_utils,
+        card_preview_width=512,
+        logger=logging.getLogger("test"),
+    )
+
+    result = await service.save_recipe(
+        recipe_scanner=scanner,
+        image_bytes=b"image-bytes",
+        image_base64=None,
+        name="Workflow Recipe",
+        tags=[],
+        metadata={"base_model": "sd", "loras": []},
+    )
+
+    stored = json.loads(Path(result.payload["json_path"]).read_text())
+    assert stored["has_workflow"] is True
+    assert scanner._cache.raw_data[0]["has_workflow"] is True
+
+
+@pytest.mark.asyncio
+async def test_save_recipe_records_no_workflow(tmp_path):
+    exif_utils = DummyExifUtils()
+
+    class DummyScanner:
+        def __init__(self, root):
+            self.recipes_dir = str(root)
+
+        async def find_recipes_by_fingerprint(self, fingerprint):
+            return []
+
+        async def add_recipe(self, recipe_data):
+            return None
+
+    scanner = DummyScanner(tmp_path)
+    service = RecipePersistenceService(
+        exif_utils=exif_utils,
+        card_preview_width=512,
+        logger=logging.getLogger("test"),
+    )
+
+    result = await service.save_recipe(
+        recipe_scanner=scanner,
+        image_bytes=b"image-bytes",
+        image_base64=None,
+        name="Plain Recipe",
+        tags=[],
+        metadata={"base_model": "sd", "loras": []},
+    )
+
+    stored = json.loads(Path(result.payload["json_path"]).read_text())
+    assert stored["has_workflow"] is False
 
 
 @pytest.mark.asyncio
@@ -1156,3 +1244,72 @@ async def test_analyze_local_image_fingerprint_uses_sha256_normalized_hash(tmp_p
 
     assert result.payload["loras"][0]["hash"] == sha256
     assert result.payload["fingerprint"] == f"{sha256}:1.0"
+
+
+@pytest.mark.asyncio
+async def test_reconnect_lora_distinguishes_ambiguous_mismatched_and_missing(tmp_path):
+    service = RecipePersistenceService(
+        exif_utils=DummyExifUtils(),
+        card_preview_width=512,
+        logger=logging.getLogger("test"),
+    )
+
+    models = [
+        {
+            "file_name": "style.safetensors",
+            "folder": "sd15",
+            "file_path": "/models/loras/sd15/style.safetensors",
+            "base_model": "SD 1.5",
+        },
+        {
+            "file_name": "style.safetensors",
+            "folder": "sdxl",
+            "file_path": "/models/loras/sdxl/style.safetensors",
+            "base_model": "SDXL 1.0",
+        },
+    ]
+
+    class DummyScanner:
+        def __init__(self, recipe_path):
+            self._recipe_path = recipe_path
+
+        async def get_recipe_json_path(self, recipe_id):
+            return str(self._recipe_path)
+
+        async def get_local_lora(self, name, base_model=None):
+            matches = ModelScanner.find_matching_models(models, name, base_model=base_model)
+            return matches[0] if len(matches) == 1 else None
+
+        async def find_local_loras_by_name(self, name, base_model=None):
+            return ModelScanner.find_matching_models(models, name, base_model=base_model)
+
+    def write_recipe(base_model):
+        recipe_path = tmp_path / "recipe.json"
+        recipe_path.write_text(
+            json.dumps({"id": "r1", "base_model": base_model, "loras": []})
+        )
+        return DummyScanner(recipe_path)
+
+    # Ambiguous bare name: two candidates survive (recipe base model unknown)
+    scanner = write_recipe("")
+    with pytest.raises(RecipeValidationError, match="include the folder path"):
+        await service.reconnect_lora(
+            recipe_scanner=scanner, recipe_id="r1", lora_index=0, target_name="style"
+        )
+
+    # Confident base-model mismatch: the only candidate belongs to another family
+    scanner = write_recipe("SD 1.5")
+    with pytest.raises(RecipeValidationError, match="different base model"):
+        await service.reconnect_lora(
+            recipe_scanner=scanner,
+            recipe_id="r1",
+            lora_index=0,
+            target_name="sdxl/style",
+        )
+
+    # No candidate at all
+    scanner = write_recipe("SDXL 1.0")
+    with pytest.raises(RecipeNotFoundError, match="not found"):
+        await service.reconnect_lora(
+            recipe_scanner=scanner, recipe_id="r1", lora_index=0, target_name="missing"
+        )
