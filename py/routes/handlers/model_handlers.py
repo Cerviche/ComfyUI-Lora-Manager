@@ -15,6 +15,10 @@ from aiohttp import web
 import jinja2
 
 from ...config import config
+from ...services.active_filters_store import (
+    ActiveFiltersStore,
+    active_filters_to_query_kwargs,
+)
 from ...services.download_coordinator import DownloadCoordinator
 from ...services.connectivity_guard import (
     OFFLINE_FRIENDLY_MESSAGE,
@@ -634,6 +638,16 @@ class ModelManagementHandler:
             file_path = data.get("file_path")
             model_id = data.get("model_id")
             model_version_id = data.get("model_version_id")
+            source = data.get("source")
+
+            if source not in (None, "", "civarchive"):
+                return web.json_response(
+                    {
+                        "success": False,
+                        "error": f"Unsupported relink source: {source}",
+                    },
+                    status=400,
+                )
 
             if not file_path or model_id is None:
                 return web.json_response(
@@ -649,20 +663,33 @@ class ModelManagementHandler:
                 metadata_path
             )
 
+            relink_kwargs = {
+                "file_path": file_path,
+                "metadata": local_metadata,
+                "model_id": int(model_id),
+                "model_version_id": int(model_version_id) if model_version_id else None,
+            }
+            if source == "civarchive":
+                relink_kwargs["provider_name"] = "civarchive_api"
+
             updated_metadata = await self._metadata_sync.relink_metadata(
-                file_path=file_path,
-                metadata=local_metadata,
-                model_id=int(model_id),
-                model_version_id=int(model_version_id) if model_version_id else None,
+                **relink_kwargs
             )
 
             await self._service.scanner.update_single_model_cache(
                 file_path, file_path, updated_metadata
             )
 
-            message = f"Model successfully re-linked to Civitai model {model_id}" + (
-                f" version {model_version_id}" if model_version_id else ""
-            )
+            if source == "civarchive":
+                message = (
+                    f"Model successfully re-linked to CivArchive model {model_id}"
+                    + (f" version {model_version_id}" if model_version_id else "")
+                )
+            else:
+                message = (
+                    f"Model successfully re-linked to Civitai model {model_id}"
+                    + (f" version {model_version_id}" if model_version_id else "")
+                )
             return web.json_response(
                 {
                     "success": True,
@@ -670,6 +697,8 @@ class ModelManagementHandler:
                     "hash": updated_metadata.get("sha256", ""),
                 }
             )
+        except ValueError as exc:
+            return web.json_response({"success": False, "error": str(exc)}, status=400)
         except Exception as exc:
             if is_expected_offline_error(str(exc)):
                 return web.json_response(
@@ -1570,12 +1599,50 @@ class ModelQueryHandler:
                     allow_selling_generated_content.lower() not in ("false", "0", "")
                 )
 
+            # When requested, merge the manager page's active filters stored
+            # server-side. Explicit query parameters take precedence over the
+            # stored values.
+            use_active_filters = (
+                request.query.get("use_active_filters", "").lower() in ("1", "true")
+            )
+            if use_active_filters:
+                stored = ActiveFiltersStore.get_instance().get_filters(
+                    self._service.model_type
+                )
+                injected = active_filters_to_query_kwargs(stored)
+                if folder is None and "folder" in injected:
+                    folder = injected["folder"]
+                if "recursive" not in request.query and "recursive" in injected:
+                    recursive = injected["recursive"]
+                if not base_models and injected.get("base_models"):
+                    base_models = injected["base_models"]
+                if not model_types and injected.get("model_types"):
+                    model_types = injected["model_types"]
+                if not tag_filters and injected.get("tags"):
+                    tag_filters = injected["tags"]
+                if not auto_tag_filters and injected.get("auto_tags"):
+                    auto_tag_filters = injected["auto_tags"]
+                if "tag_logic" not in request.query and injected.get("tag_logic"):
+                    injected_logic = str(injected["tag_logic"]).lower()
+                    if injected_logic in ("any", "all"):
+                        tag_logic = injected_logic
+                if credit_required is None and "credit_required" in injected:
+                    credit_required = injected["credit_required"]
+                if (
+                    allow_selling_generated_content is None
+                    and "allow_selling_generated_content" in injected
+                ):
+                    allow_selling_generated_content = injected[
+                        "allow_selling_generated_content"
+                    ]
+
             # The presence of the recursive param (always sent by the loras
             # widget when filter mode is on) signals that the filter pipeline
             # must run even when no concrete filter is set, so global settings
             # like show_only_sfw stay consistent with the list endpoint.
             apply_filters = (
-                "recursive" in request.query
+                use_active_filters
+                or "recursive" in request.query
                 or folder is not None
                 or bool(base_models)
                 or bool(model_types)
@@ -1606,6 +1673,50 @@ class ModelQueryHandler:
         except Exception as exc:
             self._logger.error(
                 "Error getting relative paths for autocomplete: %s", exc, exc_info=True
+            )
+            return web.json_response({"success": False, "error": str(exc)}, status=500)
+
+    async def update_active_filters(self, request: web.Request) -> web.Response:
+        """Store the manager page's active filters for this model type."""
+        try:
+            payload = await request.json()
+        except Exception:
+            return web.json_response(
+                {"success": False, "error": "Invalid JSON body"}, status=400
+            )
+
+        if not isinstance(payload, dict):
+            return web.json_response(
+                {"success": False, "error": "Body must be a JSON object"}, status=400
+            )
+
+        try:
+            ActiveFiltersStore.get_instance().set_filters(
+                self._service.model_type, payload
+            )
+            return web.json_response({"success": True})
+        except Exception as exc:
+            self._logger.error(
+                "Error updating active filters for %s: %s",
+                self._service.model_type,
+                exc,
+                exc_info=True,
+            )
+            return web.json_response({"success": False, "error": str(exc)}, status=500)
+
+    async def get_active_filters(self, request: web.Request) -> web.Response:
+        """Return the stored active filters for this model type."""
+        try:
+            filters = ActiveFiltersStore.get_instance().get_filters(
+                self._service.model_type
+            )
+            return web.json_response({"success": True, "filters": filters})
+        except Exception as exc:
+            self._logger.error(
+                "Error getting active filters for %s: %s",
+                self._service.model_type,
+                exc,
+                exc_info=True,
             )
             return web.json_response({"success": False, "error": str(exc)}, status=500)
 
@@ -3314,6 +3425,8 @@ class ModelHandlerSet:
             "get_model_metadata": self.query.get_model_metadata,
             "get_model_description": self.query.get_model_description,
             "get_relative_paths": self.query.get_relative_paths,
+            "update_active_filters": self.query.update_active_filters,
+            "get_active_filters": self.query.get_active_filters,
             "refresh_model_updates": self.updates.refresh_model_updates,
             "fetch_missing_civitai_license_data": self.updates.fetch_missing_civitai_license_data,
             "set_model_update_ignore": self.updates.set_model_update_ignore,

@@ -8,6 +8,7 @@ from typing import Dict, Any
 from ..base import RecipeMetadataParser
 from ..constants import GEN_PARAM_KEYS
 from ...services.metadata_service import get_default_metadata_provider
+from ...utils.constants import is_empty_placeholder_hash
 
 logger = logging.getLogger(__name__)
 
@@ -146,15 +147,13 @@ class AutomaticMetadataParser(RecipeMetadataParser):
                                     # Initialize hashes dict if it doesn't exist
                                     if "hashes" not in metadata:
                                         metadata["hashes"] = {}
-                                    # Add as lora type in the same format as
-                                    # regular hashes.  Only override an
-                                    # existing entry if its value is empty
-                                    # (Lora hashes is the more reliable
-                                    # source when Hashes JSON has blanks).
+                                    # Lora hashes carries the 12-char AutoV3
+                                    # hash (resolvable on CivitAI and the local
+                                    # autov3 index); the Hashes JSON value is
+                                    # only the 10-char AutoV2 prefix, so on
+                                    # conflict the Lora hashes value wins.
                                     key = f"lora:{lora_name}"
-                                    existing = metadata["hashes"].get(key, "")
-                                    if not existing:
-                                        metadata["hashes"][key] = lora_hash
+                                    metadata["hashes"][key] = lora_hash
 
                             # Remove lora hashes from params section
                             params_section = params_section.replace(lora_hashes_match.group(0), '')
@@ -525,6 +524,26 @@ class AutomaticMetadataParser(RecipeMetadataParser):
                 prompt_entries = prompt_by_basename.get(basename_key, [])
                 weight = prompt_entries[0][1] if len(prompt_entries) == 1 else 1.0
                 lora_entry = make_lora_entry(lora_type, lora_name, weight, lora_hash)
+
+                if is_empty_placeholder_hash(lora_hash):
+                    # The empty-hash placeholder (SHA256 of an empty byte
+                    # string) is not a real hash: never look it up in the
+                    # local hash index or on CivitAI. Match by filename;
+                    # otherwise keep the item as unresolved (no hash, flagged
+                    # hashInvalid so the UI shows the unresolvable-hash state
+                    # and offers reconnect instead of download) rather than
+                    # dropping it.
+                    if recipe_scanner and lora_type == 'lora' and basename_key not in queried_local_basenames:
+                        local_lora = await recipe_scanner.get_local_lora(lora_name, recipe_base_model)
+                        if local_lora:
+                            local_entry = self.populate_lora_from_local(lora_entry, local_lora)
+                            merge_or_append_local(local_entry)
+                            continue
+                    lora_entry['hash'] = ''
+                    lora_entry['hashInvalid'] = True
+                    if not resource_lora_count:
+                        loras.append(lora_entry)
+                    continue
 
                 if lora_hash and recipe_scanner and lora_type == 'lora':
                     local_lora = await recipe_scanner.get_local_lora_by_hash(lora_hash)
