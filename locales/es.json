@@ -212,20 +212,10 @@
             "none": "Todos los {typePlural} ya tienen metadatos de licencia",
             "error": "No se pudieron actualizar los metadatos de licencia de los {typePlural}: {message}"
         },
-        "repairRecipes": {
-            "label": "Reparar datos de recetas",
-            "loading": "Reparando datos de recetas...",
-            "success": "Se repararon con éxito {count} recetas.",
-            "cancelled": "Reparación cancelada. {count} recetas fueron reparadas.",
-            "error": "Error al reparar recetas: {message}"
-        },
         "rematchRecipes": {
             "label": "Reasociar recetas con modelos locales",
             "loading": "Reasociando recetas con modelos locales...",
             "success": "{entries} entradas asociadas en {recipes} recetas",
-            "successErrors": "{entries} entradas asociadas en {recipes} recetas, {failures} fallidas",
-            "allFailed": "Falló la reasociación de {failures} de {total} recetas",
-            "noMatch": "No se encontró coincidencia local para {entries} entradas en {recipes} recetas",
             "cancelled": "Reasociación cancelada. {recipes} recetas actualizadas ({entries} entradas)",
             "error": "Falló la reasociación de recetas: {message}"
         },
@@ -821,7 +811,6 @@
             "setContentRating": "Establecer clasificación de contenido para todos",
             "copyAll": "Copiar toda la sintaxis",
             "refreshAll": "Actualizar todos los metadatos",
-            "repairMetadata": "Reparar metadatos de la selección",
             "rematchMetadata": "Reasociar los seleccionados con modelos locales",
             "reimportMetadata": "Reimportar desde origen",
             "checkUpdates": "Comprobar actualizaciones para la selección",
@@ -877,7 +866,6 @@
             "replacePreview": "Reemplazar vista previa",
             "setContentRating": "Establecer clasificación de contenido",
             "moveToFolder": "Mover a carpeta",
-            "repairMetadata": "Reparar metadatos",
             "rematchMetadata": "Reasociar con modelos locales",
             "reimportMetadata": "Reimportar desde origen",
             "excludeModel": "Excluir modelo",
@@ -1129,13 +1117,6 @@
                 "noMissingLoras": "No hay LoRAs faltantes para descargar",
                 "getInfoFailed": "Error al obtener información de LoRAs faltantes",
                 "prepareError": "Error preparando LoRAs para descarga: {message}"
-            },
-            "repair": {
-                "starting": "Reparando metadatos de la receta...",
-                "success": "Metadatos de la receta reparados con éxito",
-                "skipped": "La receta ya está en la última versión, no se necesita reparación",
-                "failed": "Error al reparar la receta: {message}",
-                "missingId": "No se puede reparar la receta: falta el ID de la receta"
             },
             "reimport": {
                 "starting": "Reimportando receta desde origen...",
@@ -1516,6 +1497,41 @@
             "moreItems": "...y {count} más",
             "note": "Los archivos se descargarán usando las plantillas de ruta predeterminadas. Esto puede tomar un tiempo dependiendo del número de LoRAs.",
             "downloadButton": "Descargar {count} LoRA(s)"
+        },
+        "rematchOptions": {
+            "title": "Reasociar recetas",
+            "messageGlobal": "Se escanearán todas las recetas contra tu biblioteca local de modelos.",
+            "messageSingle": "Se escaneará esta receta contra tu biblioteca local de modelos.",
+            "messageBulk": "Se escanearán {count} receta(s) seleccionada(s) contra tu biblioteca local de modelos.",
+            "relaxedLabel": "Reconectar también los modelos faltantes por nombre de archivo",
+            "relaxedDescription": "Estos modelos también se pueden corregir descargándolos; la descarga es más precisa. Las coincidencias pueden enlazar una versión diferente; se listarán para su revisión y se pueden deshacer.",
+            "confirmButton": "Reasociar"
+        },
+        "rematchResults": {
+            "undo": "Deshacer",
+            "undone": "Deshecho",
+            "undoFailed": "No se pudo deshacer la reasociación: {message}"
+        },
+        "rematchSummary": {
+            "title": "Resumen de la reasociación",
+            "successMessage": "{entries} entradas asociadas",
+            "failed": "Falló la reasociación",
+            "completedWithWarnings": "Reasociación completada — se recomienda revisar",
+            "cancelledNote": "Ejecución cancelada antes de completarse — los recuentos son parciales.",
+            "statMatched": "Entradas asociadas",
+            "statReview": "Por revisar",
+            "statUnresolved": "Sin coincidencia",
+            "statErrors": "Errores",
+            "reviewSection": "Coincidencias por nombre de archivo para revisar ({count})",
+            "columnRecipe": "Receta",
+            "columnEntry": "Entrada",
+            "columnFile": "Archivo coincidente",
+            "columnUndo": "Deshacer",
+            "copyReport": "Copiar informe",
+            "close": "Cerrar",
+            "scope_global": "Todas las recetas",
+            "scope_bulk": "Recetas seleccionadas",
+            "scope_single": "Receta individual"
         },
         "exampleAccess": {
             "title": "Imágenes de ejemplo locales",
@@ -2184,6 +2200,7 @@
             "createMissingData": "Faltan datos necesarios para crear la receta",
             "created": "Receta creada exitosamente",
             "noMissingLoras": "No hay LoRAs faltantes para descargar",
+            "unresolvableMarkedForReconnect": "Se marcaron {count} entrada(s) no resoluble(s) — ahora se pueden reconectar a un LoRA local.",
             "noPreviousRecipe": "No hay receta anterior disponible",
             "noNextRecipe": "No hay siguiente receta disponible",
             "missingLorasInfoFailed": "Error al obtener información de LoRAs faltantes",
@@ -2238,16 +2255,10 @@
             "batchImportBrowseFailed": "No se pudo examinar el directorio: {message}",
             "batchImportDirectorySelected": "Directorio seleccionado: {path}",
             "noRecipesSelected": "No se han seleccionado recetas",
-            "repairBulkComplete": "Reparación completa: {repaired} reparadas, {skipped} omitidas (de {total})",
-            "repairBulkSkipped": "No se necesita reparación para ninguna de las {total} recetas seleccionadas",
-            "repairBulkFailed": "Error al reparar las recetas seleccionadas: {message}",
-            "rematchComplete": "{entries} entradas asociadas en {recipes} recetas",
-            "rematchCompleteErrors": "{entries} entradas asociadas en {recipes} recetas, {failures} fallidas",
-            "rematchAllFailed": "Falló la reasociación de {failures} de {total} recetas seleccionadas",
-            "rematchUnmatched": "No se encontró coincidencia local para {entries} entradas en {recipes} recetas",
             "rematchSkipped": "Ninguna de las {total} recetas seleccionadas necesita reasociación",
             "rematchFailed": "Falló la reasociación de las recetas seleccionadas: {message}",
             "reimporting": "Reimportando receta desde origen...",
+            "reimportingViaExtension": "Reimportando receta {current}/{total} mediante la extensión del navegador...",
             "reimportSuccess": "Receta reimportada exitosamente",
             "reimportBulkComplete": "Reimportación completa: {completed} reimportadas, {failed} fallidas (de {total})",
             "reimportBulkFailed": "Error al reimportar algunas recetas",

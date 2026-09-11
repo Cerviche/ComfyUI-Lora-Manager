@@ -212,20 +212,10 @@
             "none": "所有 {typePlural} 都已具备许可证元数据",
             "error": "刷新 {typePlural} 的许可证元数据失败：{message}"
         },
-        "repairRecipes": {
-            "label": "修复配方数据",
-            "loading": "正在修复配方数据...",
-            "success": "成功修复了 {count} 个配方。",
-            "cancelled": "修复已取消。已修复 {count} 个配方。",
-            "error": "配方修复失败：{message}"
-        },
         "rematchRecipes": {
             "label": "将配方重新匹配到本地模型",
             "loading": "正在将配方重新匹配到本地模型...",
             "success": "已匹配 {entries} 个条目，涉及 {recipes} 个配方",
-            "successErrors": "已匹配 {entries} 个条目，涉及 {recipes} 个配方，{failures} 个失败",
-            "allFailed": "{failures}/{total} 个配方重新匹配失败",
-            "noMatch": "在 {recipes} 个配方中未找到 {entries} 个条目的本地匹配",
             "cancelled": "已取消重新匹配。{recipes} 个配方已更新（{entries} 个条目）。",
             "error": "配方重新匹配失败：{message}"
         },
@@ -821,7 +811,6 @@
             "setContentRating": "为所选中设置内容评级",
             "copyAll": "复制所选中语法",
             "refreshAll": "刷新所选中元数据",
-            "repairMetadata": "修复所选中元数据",
             "rematchMetadata": "将所选中重新匹配到本地模型",
             "reimportMetadata": "从源重新导入",
             "checkUpdates": "检查所选更新",
@@ -877,7 +866,6 @@
             "replacePreview": "替换预览",
             "setContentRating": "设置内容评级",
             "moveToFolder": "移动到文件夹",
-            "repairMetadata": "修复元数据",
             "rematchMetadata": "重新匹配到本地模型",
             "reimportMetadata": "从源重新导入",
             "excludeModel": "排除模型",
@@ -1129,13 +1117,6 @@
                 "noMissingLoras": "没有缺失的 LoRA 可下载",
                 "getInfoFailed": "获取缺失 LoRA 信息失败",
                 "prepareError": "准备下载 LoRA 时出错：{message}"
-            },
-            "repair": {
-                "starting": "正在修复配方元数据...",
-                "success": "配方元数据修复成功",
-                "skipped": "配方已是最新版本，无需修复",
-                "failed": "修复配方失败：{message}",
-                "missingId": "无法修复配方：缺少配方 ID"
             },
             "reimport": {
                 "starting": "正在从源重新导入配方...",
@@ -1516,6 +1497,41 @@
             "moreItems": "...还有 {count} 个",
             "note": "文件将使用默认路径模板下载。根据 LoRAs 的数量，这可能需要一些时间。",
             "downloadButton": "下载 {count} 个 LoRA(s)"
+        },
+        "rematchOptions": {
+            "title": "重新匹配配方",
+            "messageGlobal": "将对照你的本地模型库扫描所有配方。",
+            "messageSingle": "将对照你的本地模型库扫描此配方。",
+            "messageBulk": "将对照你的本地模型库扫描 {count} 个所选配方。",
+            "relaxedLabel": "同时按文件名重新关联缺失的模型",
+            "relaxedDescription": "这些模型也可以通过下载来修复——下载更为准确。匹配结果可能链接到模型的其他版本；它们会被列出供检查，且可以撤销。",
+            "confirmButton": "重新匹配"
+        },
+        "rematchResults": {
+            "undo": "撤销",
+            "undone": "已撤销",
+            "undoFailed": "撤销重新匹配失败：{message}"
+        },
+        "rematchSummary": {
+            "title": "重新匹配摘要",
+            "successMessage": "已匹配 {entries} 个条目",
+            "failed": "重新匹配失败",
+            "completedWithWarnings": "重新匹配已完成——建议检查",
+            "cancelledNote": "运行在完成前已取消——统计不完整。",
+            "statMatched": "已匹配条目",
+            "statReview": "需要检查",
+            "statUnresolved": "未匹配",
+            "statErrors": "错误",
+            "reviewSection": "需要检查的文件名匹配（{count}）",
+            "columnRecipe": "配方",
+            "columnEntry": "条目",
+            "columnFile": "匹配到的文件",
+            "columnUndo": "撤销",
+            "copyReport": "复制报告",
+            "close": "关闭",
+            "scope_global": "所有配方",
+            "scope_bulk": "所选配方",
+            "scope_single": "单个配方"
         },
         "exampleAccess": {
             "title": "本地示例图片",
@@ -2184,6 +2200,7 @@
             "createMissingData": "缺少创建配方所需的数据",
             "created": "配方创建成功",
             "noMissingLoras": "没有缺失的 LoRA 可下载",
+            "unresolvableMarkedForReconnect": "已标记 {count} 个无法解析的条目——现在可以将它们重新关联到本地 LoRA。",
             "noPreviousRecipe": "没有上一个配方",
             "noNextRecipe": "没有下一个配方",
             "missingLorasInfoFailed": "获取缺失 LoRA 信息失败",
@@ -2238,16 +2255,10 @@
             "batchImportBrowseFailed": "浏览目录失败：{message}",
             "batchImportDirectorySelected": "已选择目录：{path}",
             "noRecipesSelected": "未选择任何配方",
-            "repairBulkComplete": "修复完成：{repaired} 个已修复，{skipped} 个已跳过（共 {total} 个）",
-            "repairBulkSkipped": "所选 {total} 个配方无需修复",
-            "repairBulkFailed": "修复所选配方失败：{message}",
-            "rematchComplete": "已匹配 {entries} 个条目，涉及 {recipes} 个配方",
-            "rematchCompleteErrors": "已匹配 {entries} 个条目，涉及 {recipes} 个配方，{failures} 个失败",
-            "rematchAllFailed": "{failures}/{total} 个所选配方重新匹配失败",
-            "rematchUnmatched": "在 {recipes} 个配方中未找到 {entries} 个条目的本地匹配",
             "rematchSkipped": "{total} 个所选配方均无需重新匹配",
             "rematchFailed": "重新匹配所选配方失败：{message}",
             "reimporting": "正在从源重新导入配方...",
+            "reimportingViaExtension": "正在通过浏览器扩展重新导入配方 {current}/{total}...",
             "reimportSuccess": "配方已从源重新导入成功",
             "reimportBulkComplete": "重新导入完成：{completed} 个已导入，{failed} 个失败（共 {total} 个）",
             "reimportBulkFailed": "重新导入某些配方失败",
